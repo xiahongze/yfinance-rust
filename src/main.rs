@@ -1,4 +1,5 @@
 mod options;
+mod http;
 
 fn main() {
     // let start = NaiveDate::parse_from_str("2020-01-17", "%Y-%m-%d");
@@ -11,4 +12,5 @@ fn main() {
     println!("Using end: {:?}", opts.end);
     println!("Using symbols: {:?}", opts.symbols);
     println!("Using adjusted close: {:?}", opts.adjusted_close);
+    // http::download(opts);
 }

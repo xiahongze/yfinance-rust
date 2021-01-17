@@ -1,6 +1,6 @@
 use chrono::{NaiveDate, Local, Datelike};
 use clap::Clap;
-// https://query1.finance.yahoo.com/v7/finance/download/GXY.AX?period1=1579236638&period2=1610859038&interval=1d&events=history&includeAdjustedClose=true
+
 #[derive(Clap)]
 #[clap(version = "1.0", author = "Hongze Xia hongzex@gmail.com>")]
 pub struct Opts {
@@ -47,4 +47,14 @@ pub fn parse() -> Opts {
 //     #[clap(short)]
 //     debug: bool
 // }
+
+#[cfg(test)]
+mod tests {
+    // use super::*;
+    #[test]
+    #[should_panic(expected = "I am scared!")]
+    fn test_fun() {
+        panic!("I am scared!");
+    }
+}
 
