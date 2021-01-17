@@ -1,4 +1,4 @@
-use chrono::{NaiveDate, Local, Datelike};
+use chrono::{Datelike, Local, NaiveDate};
 use clap::Clap;
 
 #[derive(Clap)]
@@ -29,7 +29,12 @@ pub fn parse() -> Opts {
     let mut opts: Opts = Opts::parse();
     if opts.end.is_none() {
         let now = Local::now();
-        opts.end = Some(NaiveDate::from_ymd(now.year(),now.month(), now.day()))
+        opts.end = Some(NaiveDate::from_ymd(now.year(), now.month(), now.day()))
+    }
+    if let Some(end) = opts.end {
+        if opts.start >= end {
+            panic!("start date is greater or equal to end date")
+        }
     }
     opts
 }
@@ -57,4 +62,3 @@ mod tests {
         panic!("I am scared!");
     }
 }
-

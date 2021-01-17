@@ -13,23 +13,29 @@ pub async fn download(opts: Opts) -> Result<()> {
     // let client = hyper::Client::new();
     for symb in opts.symbols.iter() {
         let base = format!("https://query1.finance.yahoo.com/v7/finance/download/{}", symb);
-        let mut url = url::Url::parse(base.as_str()).unwrap();
-        url
-            .query_pairs_mut()
-            .append_pair("period1", opts.start.and_hms(0,0,0).timestamp().to_string().as_str())
-            .append_pair("period2", opts.end.unwrap().and_hms(0,0,0).timestamp().to_string().as_str())
-            .append_pair("includeAdjustedClose", opts.adjusted_close.to_string().as_str())
-            .append_pair("events", "history")
-            .append_pair("interval", "1d");
+        let url = url::Url::parse_with_params(
+            base.as_str(),
+            &[
+                ("period1", opts.start.and_hms(0, 0, 0).timestamp().to_string().as_str()),
+                (
+                    "period2",
+                    opts.end.unwrap().and_hms(0, 0, 0).timestamp().to_string().as_str(),
+                ),
+                ("includeAdjustedClose", opts.adjusted_close.to_string().as_str()),
+                ("events", "history"),
+                ("interval", "1d"),
+            ],
+        )
+        .unwrap();
         println!("{}", url.as_str());
         let uri = url.as_str().parse().unwrap();
         let resp = client.get(uri).await?;
         println!("headers are {:?}", resp.headers());
-        println!("headers are {:?}", resp.status());
+        println!("status is {:?}", resp.status());
         let body = hyper::body::to_bytes(resp).await?;
         println!("body len is {}, {:?}...", body.len(), body);
         {
-            let mut file = File::create("test.html")?;
+            let mut file = File::create("test.csv")?;
             // Write a slice of bytes to the file
             file.write(&body)?;
         }
@@ -39,9 +45,9 @@ pub async fn download(opts: Opts) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
+    use super::{download, Opts};
     use chrono::NaiveDate;
     use tokio_test::*;
-    use super::{download, Opts};
     // #[test]
     // fn test2() {
     //     println!("++++++++++++++++++++++");
