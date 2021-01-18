@@ -3,7 +3,8 @@ mod options;
 #[macro_use]
 extern crate log;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     env_logger::init();
     // let start = NaiveDate::parse_from_str("2020-01-17", "%Y-%m-%d");
     // println!("Hello, world!, {:?}", start);
@@ -15,5 +16,5 @@ fn main() {
     println!("Using end: {:?}", opts.end);
     println!("Using symbols: {:?}", opts.symbols);
     println!("Using adjusted close: {:?}", opts.adjusted_close);
-    // http::download(opts);
+    let _ = http::download(opts).await;
 }

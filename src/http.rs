@@ -7,7 +7,7 @@ use tokio::fs::File;
 use tokio::io;
 // Needed for the stream conversion
 use futures::stream::{StreamExt, TryStreamExt};
-use hyper::{Response, Body};
+use hyper::{Body, Response};
 
 // #[allow(dead_code)]
 pub async fn download(opts: Opts) -> Result<()> {
@@ -54,7 +54,7 @@ fn make_uri(opts: &Opts, symbol: &String) -> hyper::Uri {
             ("interval", "1d"),
         ],
     )
-        .unwrap();
+    .unwrap();
     println!("{}", url.as_str());
     url.into_string().parse().unwrap()
 }
