@@ -16,8 +16,8 @@ pub async fn download(opts: Opts) -> Result<()> {
     // let client = hyper::Client::new();
     for symb in opts.symbols.iter() {
         let resp = client.get(make_uri(&opts, symb)).await?;
-        println!("headers are {:?}", resp.headers());
-        println!("status is {:?}", resp.status());
+        info!("content type: {:?}", resp.headers().get("content-type"));
+        info!("status: {:?}", resp.status());
         write_to_file(resp).await?;
     }
     Ok(())
@@ -64,6 +64,10 @@ mod tests {
     use super::{download, Opts};
     use chrono::NaiveDate;
     use tokio_test::*;
+
+    fn init() {
+        let _ = env_logger::builder().is_test(true).try_init();
+    }
     // #[test]
     // fn test2() {
     //     println!("++++++++++++++++++++++");
@@ -72,6 +76,7 @@ mod tests {
 
     #[test]
     fn test1() {
+        init();
         println!("+++++++++++++++++++++");
         let opts = Opts {
             symbols: vec!["GXY.AX".to_string()],

@@ -1,7 +1,10 @@
 mod http;
 mod options;
+#[macro_use]
+extern crate log;
 
 fn main() {
+    env_logger::init();
     // let start = NaiveDate::parse_from_str("2020-01-17", "%Y-%m-%d");
     // println!("Hello, world!, {:?}", start);
     let opts = options::parse();
