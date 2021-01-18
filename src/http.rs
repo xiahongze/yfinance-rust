@@ -13,14 +13,13 @@ pub async fn download(opts: Opts) -> Result<()> {
     // let client = hyper::Client::new();
     for symb in opts.symbols.iter() {
         let base = format!("https://query1.finance.yahoo.com/v7/finance/download/{}", symb);
+        let start = opts.start.and_hms(0, 0, 0).timestamp().to_string();
+        let end = opts.end.unwrap().and_hms(0, 0, 0).timestamp().to_string();
         let url = url::Url::parse_with_params(
             base.as_str(),
             &[
-                ("period1", opts.start.and_hms(0, 0, 0).timestamp().to_string().as_str()),
-                (
-                    "period2",
-                    opts.end.unwrap().and_hms(0, 0, 0).timestamp().to_string().as_str(),
-                ),
+                ("period1", start.as_str()),
+                ("period2",end.as_str()),
                 ("includeAdjustedClose", opts.adjusted_close.to_string().as_str()),
                 ("events", "history"),
                 ("interval", "1d"),
@@ -28,7 +27,7 @@ pub async fn download(opts: Opts) -> Result<()> {
         )
         .unwrap();
         println!("{}", url.as_str());
-        let uri = url.as_str().parse().unwrap();
+        let uri = url.into_string().parse()?;
         let resp = client.get(uri).await?;
         println!("headers are {:?}", resp.headers());
         println!("status is {:?}", resp.status());
