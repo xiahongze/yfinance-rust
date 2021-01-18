@@ -15,44 +15,49 @@ pub async fn download(opts: Opts) -> Result<()> {
     let client = hyper::Client::builder().build::<_, hyper::Body>(https);
     // let client = hyper::Client::new();
     for symb in opts.symbols.iter() {
-        let base = format!("https://query1.finance.yahoo.com/v7/finance/download/{}", symb);
-        let start = opts.start.and_hms(0, 0, 0).timestamp().to_string();
-        let end = opts.end.unwrap().and_hms(0, 0, 0).timestamp().to_string();
-        let url = url::Url::parse_with_params(
-            base.as_str(),
-            &[
-                ("period1", start.as_str()),
-                ("period2", end.as_str()),
-                ("includeAdjustedClose", opts.adjusted_close.to_string().as_str()),
-                ("events", "history"),
-                ("interval", "1d"),
-            ],
-        )
-            .unwrap();
-        println!("{}", url.as_str());
-        let uri = url.into_string().parse()?;
-        let resp = client.get(uri).await?;
+        let resp = client.get(make_uri(&opts, symb)).await?;
         println!("headers are {:?}", resp.headers());
         println!("status is {:?}", resp.status());
-        {
-            // had to use into_body because after consuming the body resp is not going to be used
-            // if using body(), a ref is used but resp is moved so it won't compile
-            let futures_io_async_read = resp
-                .into_body()
-                .map(|result| result.map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, err.to_string())))
-                .into_async_read();
-            let mut tokio_async_read = tokio_util::compat::FuturesAsyncReadCompatExt::compat(futures_io_async_read);
-
-            let mut file = File::create("test.csv").await?;
-            io::copy(&mut tokio_async_read, &mut file).await?;
-        }
+        write_to_file(resp).await?;
     }
     Ok(())
 }
 
-// async fn write_to_file(resp: Response<Body>) {
-//
-// }
+/**
+ * https://stackoverflow.com/questions/60964238/how-to-write-a-hyper-response-body-to-a-file
+ * had to use into_body() because after consuming the body resp is not going to be used
+ * if using body(), a ref is used but resp is moved so it won't compile
+ * */
+async fn write_to_file(resp: Response<Body>) -> Result<()> {
+    let futures_io_async_read = resp
+        .into_body()
+        .map(|result| result.map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, err.to_string())))
+        .into_async_read();
+    let mut tokio_async_read = tokio_util::compat::FuturesAsyncReadCompatExt::compat(futures_io_async_read);
+
+    let mut file = File::create("test.csv").await?;
+    io::copy(&mut tokio_async_read, &mut file).await?;
+    Ok(())
+}
+
+fn make_uri(opts: &Opts, symbol: &String) -> hyper::Uri {
+    let base = format!("https://query1.finance.yahoo.com/v7/finance/download/{}", symbol);
+    let start = opts.start.and_hms(0, 0, 0).timestamp().to_string();
+    let end = opts.end.unwrap().and_hms(0, 0, 0).timestamp().to_string();
+    let url = url::Url::parse_with_params(
+        base.as_str(),
+        &[
+            ("period1", start.as_str()),
+            ("period2", end.as_str()),
+            ("includeAdjustedClose", opts.adjusted_close.to_string().as_str()),
+            ("events", "history"),
+            ("interval", "1d"),
+        ],
+    )
+        .unwrap();
+    println!("{}", url.as_str());
+    url.into_string().parse().unwrap()
+}
 
 #[cfg(test)]
 mod tests {
