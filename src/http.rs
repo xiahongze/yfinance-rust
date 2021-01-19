@@ -34,8 +34,7 @@ impl std::error::Error for DownloadError {}
 pub async fn download(opts: Opts) -> Result<()> {
     let https = hyper_tls::HttpsConnector::new();
     let client_arc = Arc::new(hyper::Client::builder().build::<_, hyper::Body>(https));
-    // let opts_arc = Arc::new(opts);
-    // let client = hyper::Client::builder().build::<_, hyper::Body>(https);
+
     let out_dir = Path::new(&opts.output_dir);
     if !out_dir.exists() {
         // try to create a directory
