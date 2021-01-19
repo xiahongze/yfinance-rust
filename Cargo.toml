@@ -10,7 +10,7 @@ edition = "2018"
 chrono = "0.4"
 clap = "3.0.0-beta.2"
 url = "2.2.0"
-hyper = { version = "0.14", features = ["full"] }
+hyper = { version = "0.14", features = ["http1", "client", "stream"] }
 hyper-tls = "0.5.0"
 tokio = { version = "1", features = ["full"] } # full
 tokio-util = { version = "0.6.1", features=["compat"] }
