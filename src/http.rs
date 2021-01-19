@@ -33,15 +33,21 @@ pub async fn download(opts: Opts) -> Result<()> {
             opts.end.unwrap().format("%Y%m%d")
         );
         let uri = make_uri(&opts, symb);
+        let pathbuf = out_dir.join(filename);
         let task = async move {
             let resp = client.get(uri).await.unwrap();
             info!("content type: {:?}", resp.headers().get("content-type"));
             info!("status: {:?}", resp.status());
-            write_to_file(resp, out_dir.join(filename).as_path()).await
+            write_to_file(resp, pathbuf.as_path()).await
         };
         tasks.push(task);
     }
-    let _ = futures::future::join_all(tasks).await;
+    let (success, total) = futures::future::join_all(tasks)
+        .await
+        .iter()
+        .map(|r| if r.is_ok() { 1 } else { 0 })
+        .fold((0, 0), |acc, x| (acc.0 + 1, acc.1 + x));
+    info!("have successfully download {} of {}", success, total);
     Ok(())
 }
 
