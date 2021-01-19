@@ -14,13 +14,15 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>
 
 #[derive(Debug)]
 enum DownloadError {
-    Other(StatusCode, Bytes),
+    Other(StatusCode, String, Bytes),
 }
 
 impl std::fmt::Display for DownloadError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            DownloadError::Other(code, bytes) => write!(f, "status: {:?}, resp: {:?}", code, bytes),
+            DownloadError::Other(code, symb, bytes) => {
+                write!(f, "status: {:?}, symbol: {}, resp: {:?}", code, symb, bytes)
+            }
         }
     }
 }
@@ -63,7 +65,7 @@ pub async fn download(opts: Opts) -> Result<()> {
                 StatusCode::OK => write_to_file(resp, pathbuf.as_path()).await,
                 // std lib provide to convert to Box
                 // handle errors here
-                code => Err(DownloadError::Other(code, to_bytes(resp.body_mut()).await?).into()),
+                code => Err(DownloadError::Other(code, symb.to_owned(), to_bytes(resp.body_mut()).await?).into()),
             }
         };
         tasks.push(task);
@@ -144,7 +146,7 @@ mod tests {
             adjusted_close: false,
             verbose: 0,
             output_dir: "./target/output".to_string(),
-            interval: "5m".to_string(),
+            interval: "1d".to_string(),
         };
 
         assert!(download(opts).await.is_ok());
