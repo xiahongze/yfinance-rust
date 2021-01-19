@@ -1,7 +1,7 @@
 use chrono::{Datelike, Local, NaiveDate};
 use clap::Clap;
 
-#[derive(Clap)]
+#[derive(Clap, Debug)]
 #[clap(version = "1.0", author = "Hongze Xia hongzex@gmail.com>")]
 pub struct Opts {
     /// List of symbols to download. Required.
@@ -37,6 +37,7 @@ pub fn parse() -> Opts {
             panic!("start date is greater or equal to end date")
         }
     }
+    info!("{:?}", opts);
     opts
 }
 

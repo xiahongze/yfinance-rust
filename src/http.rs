@@ -86,7 +86,7 @@ fn make_uri(opts: &Opts, symbol: &String) -> hyper::Uri {
         ],
     )
     .unwrap();
-    println!("{}", url.as_str());
+    debug!("{}", url.as_str());
     url.into_string().parse().unwrap()
 }
 
@@ -94,21 +94,15 @@ fn make_uri(opts: &Opts, symbol: &String) -> hyper::Uri {
 mod tests {
     use super::{download, Opts};
     use chrono::NaiveDate;
-    use tokio_test::*;
 
     fn init() {
         let _ = env_logger::builder().is_test(true).try_init();
     }
-    // #[test]
-    // fn test2() {
-    //     println!("++++++++++++++++++++++");
-    //     assert!(true);
-    // }
 
-    #[test]
-    fn test1() {
+    /// with `tokio::test`, we don't need the std test macro and we can use async functions
+    #[tokio::test]
+    async fn test_download() {
         init();
-        println!("+++++++++++++++++++++");
         let opts = Opts {
             symbols: vec!["GXY.AX".to_string()],
             start: NaiveDate::from_ymd(2020, 1, 1),
@@ -118,6 +112,6 @@ mod tests {
             output_dir: "./target/output".to_string(),
         };
 
-        assert_ok!(block_on(download(opts)));
+        assert!(download(opts).await.is_ok());
     }
 }
