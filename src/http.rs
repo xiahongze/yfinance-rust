@@ -3,6 +3,7 @@ use crate::options::Opts;
 use std::path::Path;
 use tokio::fs::File;
 use tokio::io;
+// use tokio::io::{stdout, AsyncWriteExt as _};
 // Needed for the stream conversion
 use futures::stream::{StreamExt, TryStreamExt};
 use hyper::{Body, Response};
@@ -38,10 +39,13 @@ pub async fn download(opts: Opts) -> Result<()> {
  * https://stackoverflow.com/questions/60964238/how-to-write-a-hyper-response-body-to-a-file
  * had to use into_body() because after consuming the body resp is not going to be used
  * if using body(), a ref is used but resp is moved so it won't compile
+ *
+ * Latest update: mut resp and use body_mut()
+ *
  * */
-async fn write_to_file(resp: Response<Body>, path: &Path) -> Result<()> {
+async fn write_to_file(mut resp: Response<Body>, path: &Path) -> Result<()> {
     let futures_io_async_read = resp
-        .into_body()
+        .body_mut()
         .map(|result| result.map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, err.to_string())))
         .into_async_read();
     let mut tokio_async_read = tokio_util::compat::FuturesAsyncReadCompatExt::compat(futures_io_async_read);
