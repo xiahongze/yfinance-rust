@@ -35,18 +35,32 @@ pub async fn download(opts: Opts) -> Result<()> {
         let uri = make_uri(&opts, symb);
         let pathbuf = out_dir.join(filename);
         let task = async move {
-            let resp = client.get(uri).await.unwrap();
-            info!("content type: {:?}", resp.headers().get("content-type"));
-            info!("status: {:?}", resp.status());
-            write_to_file(resp, pathbuf.as_path()).await
+            let resp = client.get(uri).await?;
+            info!(
+                "content type: {:?}, status: {:}",
+                resp.headers().get("content-type"),
+                resp.status()
+            );
+            if resp.status() == 200 {
+                write_to_file(resp, pathbuf.as_path()).await
+            } else {
+                Ok(())
+            }
         };
         tasks.push(task);
     }
-    let (success, total) = futures::future::join_all(tasks)
+    let total = tasks.len();
+    let success = futures::future::join_all(tasks)
         .await
         .iter()
-        .map(|r| if r.is_ok() { 1 } else { 0 })
-        .fold((0, 0), |acc, x| (acc.0 + 1, acc.1 + x));
+        .map(|r| match r {
+            Ok(_) => 1,
+            Err(e) => {
+                error!("encounter error: {:?}", e);
+                1
+            }
+        })
+        .fold(0, |acc, x| acc + x);
     info!("have successfully download {} of {}", success, total);
     Ok(())
 }
