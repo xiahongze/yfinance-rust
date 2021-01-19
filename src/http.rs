@@ -4,11 +4,28 @@ use std::path::Path;
 use std::sync::Arc;
 use tokio::fs::File;
 use tokio::io;
-// use tokio::io::{stdout, AsyncWriteExt as _};
 // Needed for the stream conversion
 use futures::stream::{StreamExt, TryStreamExt};
-use hyper::{Body, Response};
+use hyper::{
+    body::{to_bytes, Bytes},
+    Body, Response, StatusCode,
+};
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
+
+#[derive(Debug)]
+enum DownloadError {
+    Other(StatusCode, Bytes),
+}
+
+impl std::fmt::Display for DownloadError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            DownloadError::Other(code, bytes) => write!(f, "status: {:?}, resp: {:?}", code, bytes),
+        }
+    }
+}
+
+impl std::error::Error for DownloadError {}
 
 // https://query1.finance.yahoo.com/v7/finance/download/GXY.AX?period1=1579236638&period2=1610859038&interval=1d&events=history&includeAdjustedClose=true
 // #[allow(dead_code)]
@@ -35,16 +52,18 @@ pub async fn download(opts: Opts) -> Result<()> {
         let uri = make_uri(&opts, symb);
         let pathbuf = out_dir.join(filename);
         let task = async move {
-            let resp = client.get(uri).await?;
-            info!(
+            let mut resp = client.get(uri).await?;
+            debug!(
                 "content type: {:?}, status: {:}",
                 resp.headers().get("content-type"),
                 resp.status()
             );
-            if resp.status() == 200 {
-                write_to_file(resp, pathbuf.as_path()).await
-            } else {
-                Ok(())
+
+            match resp.status() {
+                StatusCode::OK => write_to_file(resp, pathbuf.as_path()).await,
+                // std lib provide to convert to Box
+                // handle errors here
+                code => Err(DownloadError::Other(code, to_bytes(resp.body_mut()).await?).into()),
             }
         };
         tasks.push(task);
@@ -57,7 +76,7 @@ pub async fn download(opts: Opts) -> Result<()> {
             Ok(_) => 1,
             Err(e) => {
                 error!("encounter error: {:?}", e);
-                1
+                0
             }
         })
         .fold(0, |acc, x| acc + x);
@@ -97,7 +116,7 @@ fn make_uri(opts: &Opts, symbol: &String) -> hyper::Uri {
             ("period2", end.as_str()),
             ("includeAdjustedClose", opts.adjusted_close.to_string().as_str()),
             ("events", "history"),
-            ("interval", "1d"),
+            ("interval", opts.interval.as_str()),
         ],
     )
     .unwrap();
@@ -125,6 +144,7 @@ mod tests {
             adjusted_close: false,
             verbose: 0,
             output_dir: "./target/output".to_string(),
+            interval: "5m".to_string(),
         };
 
         assert!(download(opts).await.is_ok());
