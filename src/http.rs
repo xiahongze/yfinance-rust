@@ -1,6 +1,7 @@
 use crate::options::Opts;
 
 use std::path::Path;
+use std::sync::Arc;
 use tokio::fs::File;
 use tokio::io;
 // use tokio::io::{stdout, AsyncWriteExt as _};
@@ -13,25 +14,34 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>
 // #[allow(dead_code)]
 pub async fn download(opts: Opts) -> Result<()> {
     let https = hyper_tls::HttpsConnector::new();
-    let client = hyper::Client::builder().build::<_, hyper::Body>(https);
+    let client_arc = Arc::new(hyper::Client::builder().build::<_, hyper::Body>(https));
+    // let opts_arc = Arc::new(opts);
+    // let client = hyper::Client::builder().build::<_, hyper::Body>(https);
     let out_dir = Path::new(&opts.output_dir);
     if !out_dir.exists() {
         // try to create a directory
         std::fs::create_dir(out_dir)?;
     }
+    let mut tasks = Vec::new();
     // let client = hyper::Client::new();
     for symb in opts.symbols.iter() {
-        let resp = client.get(make_uri(&opts, symb)).await?;
-        info!("content type: {:?}", resp.headers().get("content-type"));
-        info!("status: {:?}", resp.status());
+        let client = client_arc.clone();
         let filename = format!(
             "{}_{}_{}.csv",
             symb,
             opts.start.format("%Y%m%d"),
             opts.end.unwrap().format("%Y%m%d")
         );
-        write_to_file(resp, out_dir.join(filename).as_path()).await?;
+        let uri = make_uri(&opts, symb);
+        let task = async move {
+            let resp = client.get(uri).await.unwrap();
+            info!("content type: {:?}", resp.headers().get("content-type"));
+            info!("status: {:?}", resp.status());
+            write_to_file(resp, out_dir.join(filename).as_path()).await
+        };
+        tasks.push(task);
     }
+    let _ = futures::future::join_all(tasks).await;
     Ok(())
 }
 
