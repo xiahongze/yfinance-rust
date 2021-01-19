@@ -15,9 +15,10 @@ pub struct Opts {
     /// Enable the Adjusted Close Column
     #[clap(long)]
     pub adjusted_close: bool,
-    /// Sets a custom config file. Could have been an Option<T> with no default too
-    #[clap(short, long, default_value = "default.conf")]
-    pub config: String,
+    /// Sets a output directory. The format of the output CSV looks like
+    /// `SYMBOL_20200202_20200303.csv`
+    #[clap(short, long, default_value = ".")]
+    pub output_dir: String,
     /// A level of verbosity, and can be used multiple times
     #[clap(short, long, parse(from_occurrences))]
     pub verbose: i32,

@@ -11,7 +11,7 @@ async fn main() {
     let opts = options::parse();
     // Gets a value for config if supplied by user, or defaults to "default.conf"
     println!("+++++++++++++++++++++++++++");
-    println!("Value for config: {}", opts.config);
+    println!("Value for config: {}", opts.output_dir);
     println!("Using start: {:?}", opts.start.and_hms(0, 0, 0).timestamp());
     println!("Using end: {:?}", opts.end);
     println!("Using symbols: {:?}", opts.symbols);
