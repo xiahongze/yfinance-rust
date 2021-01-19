@@ -68,6 +68,7 @@ async fn write_to_file(mut resp: Response<Body>, path: &Path) -> Result<()> {
 
     let mut file = File::create(path).await?;
     io::copy(&mut tokio_async_read, &mut file).await?;
+    info!("downloaded {:?}", path);
     Ok(())
 }
 
