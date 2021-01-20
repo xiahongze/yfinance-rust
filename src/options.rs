@@ -1,5 +1,23 @@
 use chrono::{Datelike, Local, NaiveDate};
 use clap::Clap;
+use std::{num::ParseIntError, str::FromStr, time::Duration};
+#[derive(Debug)]
+pub struct MyDuration {
+    pub duration: Duration,
+}
+
+impl FromStr for MyDuration {
+    type Err = ParseIntError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.parse::<u64>() {
+            Ok(ms) => Ok(MyDuration {
+                duration: Duration::from_millis(ms),
+            }),
+            Err(err) => Err(err),
+        }
+    }
+}
 
 #[derive(Clap, Debug)]
 #[clap(version = "1.0", author = "Hongze Xia hongzex@gmail.com>")]
@@ -27,6 +45,9 @@ pub struct Opts {
     pub interval: String,
     // #[clap(subcommand)]
     // subcmd: SubCommand,
+    /// Request rate in terms of ms
+    #[clap(long, default_value = "100")]
+    pub rate: MyDuration,
 }
 
 pub fn parse() -> Opts {

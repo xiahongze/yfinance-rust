@@ -3,7 +3,7 @@ use crate::options::Opts;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::fs::File;
-use tokio::io;
+use tokio::{io, time::sleep};
 // Needed for the stream conversion
 use futures::stream::{StreamExt, TryStreamExt};
 use hyper::{
@@ -52,6 +52,7 @@ pub async fn download(opts: Opts) -> Result<()> {
         );
         let uri = make_uri(&opts, symb);
         let pathbuf = out_dir.join(filename);
+        sleep(opts.rate.duration).await;
         let task = async move {
             let mut resp = client.get(uri).await?;
             debug!(
@@ -127,7 +128,8 @@ fn make_uri(opts: &Opts, symbol: &String) -> hyper::Uri {
 
 #[cfg(test)]
 mod tests {
-    use super::{download, Opts};
+    use super::download;
+    use crate::options::Opts;
     use chrono::NaiveDate;
 
     fn init() {
@@ -139,13 +141,14 @@ mod tests {
     async fn test_download() {
         init();
         let opts = Opts {
-            symbols: vec!["GXY.AX".to_string()],
+            symbols: vec!["GXY.AX".to_string(), "A2M.AX".to_string()],
             start: NaiveDate::from_ymd(2020, 1, 1),
             end: Some(NaiveDate::from_ymd(2020, 1, 2)),
             adjusted_close: false,
             verbose: 0,
             output_dir: "./target/output".to_string(),
             interval: "1d".to_string(),
+            rate: "1000".parse().unwrap(),
         };
 
         assert!(download(opts).await.is_ok());
