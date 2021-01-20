@@ -13,17 +13,15 @@ use hyper::{
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
 #[derive(Debug)]
-enum DownloadError {
-    Other(StatusCode, String, Bytes),
+struct DownloadError {
+    status: StatusCode,
+    symbol: String,
+    body: Bytes,
 }
 
 impl std::fmt::Display for DownloadError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            DownloadError::Other(code, symb, bytes) => {
-                write!(f, "status: {:?}, symbol: {}, resp: {:?}", code, symb, bytes)
-            }
-        }
+        write!(f, "{:?}", self)
     }
 }
 
@@ -65,7 +63,12 @@ pub async fn download(opts: Opts) -> Result<()> {
                 StatusCode::OK => write_to_file(resp, pathbuf.as_path()).await,
                 // std lib provide to convert to Box
                 // handle errors here
-                code => Err(DownloadError::Other(code, symb.to_owned(), to_bytes(resp.body_mut()).await?).into()),
+                status => Err(DownloadError {
+                    status,
+                    symbol: symb.to_owned(),
+                    body: to_bytes(resp.body_mut()).await?,
+                }
+                .into()),
             }
         };
         tasks.push(task);
@@ -142,13 +145,13 @@ mod tests {
         init();
         let opts = Opts {
             symbols: vec!["GXY.AX".to_string(), "A2M.AX".to_string()],
-            start: NaiveDate::from_ymd(2020, 1, 1),
+            start: NaiveDate::from_ymd(2020, 1, 3),
             end: Some(NaiveDate::from_ymd(2020, 1, 2)),
             adjusted_close: false,
             verbose: 0,
             output_dir: "./target/output".to_string(),
             interval: "1d".to_string(),
-            rate: "1000".parse().unwrap(),
+            rate: "500".parse().unwrap(),
         };
 
         assert!(download(opts).await.is_ok());
