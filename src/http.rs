@@ -29,15 +29,22 @@ impl std::error::Error for DownloadError {}
 
 // https://query1.finance.yahoo.com/v7/finance/download/GXY.AX?period1=1579236638&period2=1610859038&interval=1d&events=history&includeAdjustedClose=true
 // #[allow(dead_code)]
-pub async fn download(opts: Opts) -> Result<()> {
-    let https = hyper_tls::HttpsConnector::new();
-    let client_arc = Arc::new(hyper::Client::builder().build::<_, hyper::Body>(https));
-
+pub async fn download(opts: Opts) -> Vec<Result<()>> {
     let out_dir = Path::new(&opts.output_dir);
     if !out_dir.exists() {
         // try to create a directory
-        std::fs::create_dir(out_dir)?;
+        match std::fs::create_dir(out_dir) {
+            Err(err) => {
+                error!("failed to create directory at {:?} with error {:?}", out_dir, err);
+                return vec![];
+            }
+            _ => {}
+        }
     }
+
+    let https = hyper_tls::HttpsConnector::new();
+    let client_arc = Arc::new(hyper::Client::builder().build::<_, hyper::Body>(https));
+
     let mut tasks = Vec::new();
     // let client = hyper::Client::new();
     for symb in opts.symbols.iter() {
@@ -74,8 +81,8 @@ pub async fn download(opts: Opts) -> Result<()> {
         tasks.push(task);
     }
     let total = tasks.len();
-    let success = futures::future::join_all(tasks)
-        .await
+    let results = futures::future::join_all(tasks).await;
+    let success = results
         .iter()
         .map(|r| match r {
             Ok(_) => 1,
@@ -86,7 +93,8 @@ pub async fn download(opts: Opts) -> Result<()> {
         })
         .fold(0, |acc, x| acc + x);
     info!("have successfully download {} of {}", success, total);
-    Ok(())
+
+    return results;
 }
 
 /**
@@ -154,6 +162,6 @@ mod tests {
             rate: "500".parse().unwrap(),
         };
 
-        assert!(download(opts).await.is_ok());
+        assert_eq!(download(opts).await.iter().filter_map(|r| r.as_ref().ok()).count(), 0);
     }
 }
