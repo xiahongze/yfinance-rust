@@ -1,6 +1,6 @@
 use crate::options::Opts;
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::fs::File;
 use tokio::{io, time::sleep};
@@ -29,14 +29,14 @@ impl std::error::Error for DownloadError {}
 
 // https://query1.finance.yahoo.com/v7/finance/download/GXY.AX?period1=1579236638&period2=1610859038&interval=1d&events=history&includeAdjustedClose=true
 // #[allow(dead_code)]
-pub async fn download(opts: Opts) -> Vec<Result<()>> {
+pub async fn download(opts: Opts) -> (Vec<PathBuf>, Vec<Result<()>>) {
     let out_dir = Path::new(&opts.output_dir);
     if !out_dir.exists() {
         // try to create a directory
         match std::fs::create_dir(out_dir) {
             Err(err) => {
                 error!("failed to create directory at {:?} with error {:?}", out_dir, err);
-                return vec![];
+                return (vec![], vec![]);
             }
             _ => {}
         }
@@ -46,6 +46,7 @@ pub async fn download(opts: Opts) -> Vec<Result<()>> {
     let client_arc = Arc::new(hyper::Client::builder().build::<_, hyper::Body>(https));
 
     let mut tasks = Vec::new();
+    let mut paths = Vec::new();
     // let client = hyper::Client::new();
     for symb in opts.symbols.iter() {
         let client = client_arc.clone();
@@ -57,6 +58,7 @@ pub async fn download(opts: Opts) -> Vec<Result<()>> {
         );
         let uri = make_uri(&opts, symb);
         let pathbuf = out_dir.join(filename);
+        paths.push(pathbuf.clone());
         sleep(opts.rate.duration).await;
         let task = async move {
             let mut resp = client.get(uri).await?;
@@ -94,7 +96,7 @@ pub async fn download(opts: Opts) -> Vec<Result<()>> {
         .fold(0, |acc, x| acc + x);
     info!("have successfully download {} of {}", success, total);
 
-    return results;
+    (paths, results)
 }
 
 /**
@@ -141,6 +143,7 @@ mod tests {
     use super::download;
     use crate::options::Opts;
     use chrono::NaiveDate;
+    use std::fs::remove_file;
 
     fn init() {
         let _ = env_logger::builder().is_test(true).try_init();
@@ -164,14 +167,17 @@ mod tests {
     async fn test_download_success() {
         init();
         let opts = make_opts();
-        assert_eq!(download(opts).await.iter().filter_map(|r| r.as_ref().ok()).count(), 2);
+        let (paths, results) = download(opts).await;
+        assert_eq!(results.iter().filter_map(|r| r.as_ref().ok()).count(), 2);
+        paths.iter().for_each(|p| remove_file(p.as_path()).unwrap()); // remove temperorary files
     }
 
     #[tokio::test]
     async fn test_download_fail() {
         init();
         let mut opts = make_opts();
-        opts.start = "2020-01-06".into();
-        assert_eq!(download(opts).await.iter().filter_map(|r| r.as_ref().ok()).count(), 0);
+        opts.start = NaiveDate::from_ymd(2020, 1, 6);
+        let (_, results) = download(opts).await;
+        assert_eq!(results.iter().filter_map(|r| r.as_ref().ok()).count(), 0);
     }
 }
