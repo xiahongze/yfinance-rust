@@ -29,14 +29,14 @@ impl std::error::Error for DownloadError {}
 
 // https://query1.finance.yahoo.com/v7/finance/download/GXY.AX?period1=1579236638&period2=1610859038&interval=1d&events=history&includeAdjustedClose=true
 // #[allow(dead_code)]
-pub async fn download(opts: Opts) -> (Vec<PathBuf>, Vec<Result<()>>) {
+pub async fn download(opts: Opts) -> Vec<(PathBuf, Result<()>)> {
     let out_dir = Path::new(&opts.output_dir);
     if !out_dir.exists() {
         // try to create a directory
         match std::fs::create_dir(out_dir) {
             Err(err) => {
                 error!("failed to create directory at {:?} with error {:?}", out_dir, err);
-                return (vec![], vec![]);
+                return vec![];
             }
             _ => {}
         }
@@ -51,7 +51,7 @@ pub async fn download(opts: Opts) -> (Vec<PathBuf>, Vec<Result<()>>) {
     for symb in opts.symbols.iter() {
         let client = client_arc.clone();
         let filename = format!(
-            "{}_{}_{}.csv",
+            "{}_{}_{}.json",
             symb,
             opts.start.format("%Y%m%d"),
             opts.end.unwrap().format("%Y%m%d")
@@ -96,7 +96,7 @@ pub async fn download(opts: Opts) -> (Vec<PathBuf>, Vec<Result<()>>) {
         .fold(0, |acc, x| acc + x);
     info!("have successfully download {} of {}", success, total);
 
-    (paths, results)
+    paths.into_iter().zip(results).collect()
 }
 
 /**
@@ -167,9 +167,10 @@ mod tests {
     async fn test_download_success() {
         init();
         let opts = make_opts();
-        let (paths, results) = download(opts).await;
-        assert_eq!(results.iter().filter_map(|r| r.as_ref().ok()).count(), 2);
-        paths.iter().for_each(|p| remove_file(p.as_path()).unwrap()); // remove temperorary files
+        let path_results = download(opts).await;
+        assert_eq!(path_results.iter().filter_map(|(_, r)| r.as_ref().ok()).count(), 2);
+        // remove temperorary files
+        path_results.iter().for_each(|(p, _)| remove_file(p.as_path()).unwrap());
     }
 
     #[tokio::test]
@@ -177,7 +178,9 @@ mod tests {
         init();
         let mut opts = make_opts();
         opts.start = NaiveDate::from_ymd(2020, 1, 6);
-        let (_, results) = download(opts).await;
-        assert_eq!(results.iter().filter_map(|r| r.as_ref().ok()).count(), 0);
+        assert_eq!(
+            download(opts).await.iter().filter_map(|(_, r)| r.as_ref().ok()).count(),
+            0
+        );
     }
 }
