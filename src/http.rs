@@ -119,7 +119,7 @@ async fn write_to_file(mut resp: Response<Body>, path: &Path) -> Result<()> {
 }
 
 fn make_uri(opts: &Opts, symbol: &String) -> hyper::Uri {
-    let base = format!("https://query1.finance.yahoo.com/v7/finance/download/{}", symbol);
+    let base = format!("https://query1.finance.yahoo.com/v8/finance/chart/{}", symbol);
     let start = opts.start.and_hms(0, 0, 0).timestamp().to_string();
     let end = opts.end.unwrap().and_hms(0, 0, 0).timestamp().to_string();
     let url = url::Url::parse_with_params(
@@ -127,9 +127,8 @@ fn make_uri(opts: &Opts, symbol: &String) -> hyper::Uri {
         &[
             ("period1", start.as_str()),
             ("period2", end.as_str()),
-            ("includeAdjustedClose", opts.adjusted_close.to_string().as_str()),
-            ("events", "history"),
             ("interval", opts.interval.as_str()),
+            ("events", "div,split"),
         ],
     )
     .unwrap();
@@ -147,21 +146,32 @@ mod tests {
         let _ = env_logger::builder().is_test(true).try_init();
     }
 
-    /// with `tokio::test`, we don't need the std test macro and we can use async functions
-    #[tokio::test]
-    async fn test_download() {
-        init();
-        let opts = Opts {
+    fn make_opts() -> Opts {
+        Opts {
             symbols: vec!["GXY.AX".to_string(), "A2M.AX".to_string()],
             start: NaiveDate::from_ymd(2020, 1, 3),
-            end: Some(NaiveDate::from_ymd(2020, 1, 2)),
-            adjusted_close: false,
+            end: Some(NaiveDate::from_ymd(2020, 1, 5)),
+            include_pre_post: true,
             verbose: 0,
             output_dir: "./target/output".to_string(),
             interval: "1d".to_string(),
             rate: "500".parse().unwrap(),
-        };
+        }
+    }
 
+    /// with `tokio::test`, we don't need the std test macro and we can use async functions
+    #[tokio::test]
+    async fn test_download_success() {
+        init();
+        let opts = make_opts();
+        assert_eq!(download(opts).await.iter().filter_map(|r| r.as_ref().ok()).count(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_download_fail() {
+        init();
+        let mut opts = make_opts();
+        opts.start = "2020-01-06".into();
         assert_eq!(download(opts).await.iter().filter_map(|r| r.as_ref().ok()).count(), 0);
     }
 }

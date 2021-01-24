@@ -30,9 +30,9 @@ pub struct Opts {
     /// An end date. Default to Now
     #[clap(long)]
     pub end: Option<NaiveDate>,
-    /// Enable the Adjusted Close Column
+    /// Include pre & post market data
     #[clap(long)]
-    pub adjusted_close: bool,
+    pub include_pre_post: bool,
     /// Sets a output directory. The format of the output CSV looks like
     /// `SYMBOL_20200202_20200303.csv`
     #[clap(short, long, default_value = ".")]
@@ -40,8 +40,11 @@ pub struct Opts {
     /// A level of verbosity, and can be used multiple times
     #[clap(short, long, parse(from_occurrences))]
     pub verbose: i32,
-    /// Note: v7 api has no intra day data
-    #[clap(long, default_value = "1d", possible_values = &["1d", "5d", "1wk", "1mo", "3mo"])]
+    /// select a proper interval for the data
+    /// 1m goes back to 4-5 days
+    /// 5m goes back to ~80 days
+    /// others goes back to the initial trading date
+    #[clap(long, default_value = "1d", possible_values = &["1m", "5m", "1d", "5d", "1wk", "1mo", "3mo"])]
     pub interval: String,
     // #[clap(subcommand)]
     // subcmd: SubCommand,
