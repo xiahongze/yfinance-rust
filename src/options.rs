@@ -1,4 +1,4 @@
-use chrono::{Datelike, Local, NaiveDate};
+use chrono::NaiveDate;
 use clap::Clap;
 use std::{num::ParseIntError, str::FromStr, time::Duration};
 #[derive(Debug)]
@@ -25,8 +25,8 @@ pub struct Opts {
     /// List of symbols to download. Required.
     pub symbols: Vec<String>,
     /// A start date to download from
-    #[clap(long, default_value = "2020-01-01")]
-    pub start: NaiveDate,
+    #[clap(long)]
+    pub start: Option<NaiveDate>,
     /// An end date. Default to Now
     #[clap(long)]
     pub end: Option<NaiveDate>,
@@ -54,14 +54,12 @@ pub struct Opts {
 }
 
 pub fn parse() -> Opts {
-    let mut opts: Opts = Opts::parse();
-    if opts.end.is_none() {
-        let now = Local::now();
-        opts.end = Some(NaiveDate::from_ymd(now.year(), now.month(), now.day()))
-    }
-    if let Some(end) = opts.end {
-        if opts.start >= end {
-            panic!("start date is greater or equal to end date")
+    let opts: Opts = Opts::parse();
+    if let Some(start) = opts.start {
+        if let Some(end) = opts.end {
+            if start >= end {
+                panic!("start date is greater or equal to end date")
+            }
         }
     }
     info!("{:?}", opts);

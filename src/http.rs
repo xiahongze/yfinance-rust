@@ -1,5 +1,6 @@
 use crate::options::Opts;
 
+use chrono::Local;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::fs::File;
@@ -27,8 +28,6 @@ impl std::fmt::Display for DownloadError {
 
 impl std::error::Error for DownloadError {}
 
-// https://query1.finance.yahoo.com/v7/finance/download/GXY.AX?period1=1579236638&period2=1610859038&interval=1d&events=history&includeAdjustedClose=true
-// #[allow(dead_code)]
 pub async fn download(opts: Opts) -> Vec<(PathBuf, Result<()>)> {
     let out_dir = Path::new(&opts.output_dir);
     if !out_dir.exists() {
@@ -53,8 +52,10 @@ pub async fn download(opts: Opts) -> Vec<(PathBuf, Result<()>)> {
         let filename = format!(
             "{}_{}_{}.json",
             symb,
-            opts.start.format("%Y%m%d"),
-            opts.end.unwrap().format("%Y%m%d")
+            opts.start
+                .map_or("init".to_string(), |s| s.format("%Y%m%d").to_string()),
+            opts.end
+                .map_or(Local::now().to_string(), |s| s.format("%Y%m%d").to_string()),
         );
         let uri = make_uri(&opts, symb);
         let pathbuf = out_dir.join(filename);
@@ -122,15 +123,19 @@ async fn write_to_file(mut resp: Response<Body>, path: &Path) -> Result<()> {
 
 fn make_uri(opts: &Opts, symbol: &String) -> hyper::Uri {
     let base = format!("https://query1.finance.yahoo.com/v8/finance/chart/{}", symbol);
-    let start = opts.start.and_hms(0, 0, 0).timestamp().to_string();
-    let end = opts.end.unwrap().and_hms(0, 0, 0).timestamp().to_string();
+    let start = opts
+        .start
+        .map_or("0".to_string(), |s| s.and_hms(0, 0, 0).timestamp().to_string());
+    let end = opts.end.map_or("99999999999".to_string(), |s| {
+        s.and_hms(0, 0, 0).timestamp().to_string()
+    });
     let url = url::Url::parse_with_params(
         base.as_str(),
         &[
-            ("period1", start.as_str()),
-            ("period2", end.as_str()),
-            ("interval", opts.interval.as_str()),
-            ("events", "div,split"),
+            ("period1", start),
+            ("period2", end),
+            ("interval", opts.interval.to_owned()),
+            ("events", "div,split".to_string()),
         ],
     )
     .unwrap();
@@ -152,7 +157,7 @@ mod tests {
     fn make_opts() -> Opts {
         Opts {
             symbols: vec!["GXY.AX".to_string(), "A2M.AX".to_string()],
-            start: NaiveDate::from_ymd(2020, 1, 3),
+            start: Some(NaiveDate::from_ymd(2020, 1, 3)),
             end: Some(NaiveDate::from_ymd(2020, 1, 5)),
             include_pre_post: true,
             verbose: 0,
@@ -177,7 +182,7 @@ mod tests {
     async fn test_download_fail() {
         init();
         let mut opts = make_opts();
-        opts.start = NaiveDate::from_ymd(2020, 1, 6);
+        opts.start = Some(NaiveDate::from_ymd(2020, 1, 6));
         assert_eq!(
             download(opts).await.iter().filter_map(|(_, r)| r.as_ref().ok()).count(),
             0
