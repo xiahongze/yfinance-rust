@@ -143,13 +143,12 @@ impl From<Chart> for Vec<DataSet> {
 pub fn load_from_json(path: &str) -> Result<ChartWrapper, Box<dyn Error>> {
     let file = File::open(path)?;
     let reader = BufReader::new(file);
-    println!("{:?}", std::env::current_dir().unwrap());
     let u = serde_json::from_reader(reader)?;
     Ok(u)
 }
 
 pub fn write_to_csv(ds: &DataSet, path: &str) -> Result<(), Box<dyn Error>> {
-    let file = File::open(path)?;
+    let file = File::create(path)?;
     let writer = BufWriter::new(file);
     let mut wtr = Writer::from_writer(writer);
     for r in ds.records.iter() {
@@ -159,6 +158,8 @@ pub fn write_to_csv(ds: &DataSet, path: &str) -> Result<(), Box<dyn Error>> {
 }
 #[cfg(test)]
 mod tests {
+    use std::fs::remove_file;
+
     use super::*;
 
     #[test]
@@ -167,5 +168,22 @@ mod tests {
         assert!(result.is_ok());
         let result = load_from_json("assets/A2M.AX_20200103_20200107.json");
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_from_chart() {
+        let chart_wrapper = load_from_json("assets/GXY.AX_20200103_20200107.json").unwrap();
+        let ds_vec: Vec<DataSet> = chart_wrapper.chart.into();
+        assert_eq!(ds_vec.len(), 1);
+        assert_eq!(ds_vec[0].records.len(), 3);
+    }
+
+    #[test]
+    fn test_write_csv() {
+        let chart_wrapper = load_from_json("assets/A2M.AX_20200103_20200107.json").unwrap();
+        let ds_vec: Vec<DataSet> = chart_wrapper.chart.into();
+        let result = write_to_csv(&ds_vec[0], "test.csv");
+        assert!(result.is_ok());
+        let _ = remove_file("test.csv");
     }
 }

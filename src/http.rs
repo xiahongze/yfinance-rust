@@ -181,7 +181,7 @@ mod tests {
         init();
         let opts = make_opts();
         let path_results = download(opts).await;
-        // assert_remove(path_results, 2);
+        assert_remove(path_results, 2);
     }
 
     #[tokio::test]
