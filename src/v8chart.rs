@@ -44,15 +44,15 @@ pub struct V8Meta {
 }
 #[derive(Deserialize, Debug)]
 pub struct OHLCV {
-    pub volume: Vec<u64>,
-    pub high: Vec<f64>,
-    pub close: Vec<f64>,
-    pub low: Vec<f64>,
-    pub open: Vec<f64>,
+    pub volume: Vec<Option<u64>>,
+    pub high: Vec<Option<f64>>,
+    pub close: Vec<Option<f64>>,
+    pub low: Vec<Option<f64>>,
+    pub open: Vec<Option<f64>>,
 }
 #[derive(Deserialize, Debug)]
 pub struct AdjClose {
-    pub adjclose: Vec<f64>,
+    pub adjclose: Vec<Option<f64>>,
 }
 #[derive(Deserialize, Debug)]
 pub struct Indicators {
@@ -80,12 +80,12 @@ pub struct ChartWrapper {
 #[derive(Serialize, Debug)]
 pub struct Record {
     pub timestamp: DateTime<FixedOffset>,
-    pub volume: u64,
-    pub high: f64,
-    pub low: f64,
-    pub open: f64,
-    pub close: f64,
-    pub adjclose: f64,
+    pub volume: Option<u64>,
+    pub high: Option<f64>,
+    pub low: Option<f64>,
+    pub open: Option<f64>,
+    pub close: Option<f64>,
+    pub adjclose: Option<f64>,
 }
 #[derive(Serialize, Debug)]
 pub struct DataSet {
