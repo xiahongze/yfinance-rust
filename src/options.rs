@@ -36,6 +36,7 @@ pub fn parse() -> Opts {
 pub enum SubCommand {
     // #[clap(version = "1.3", author = "Someone E. <someone_else@other.com>")]
     Download(DownloadOpts),
+    Convert(ConvertOpts),
 }
 
 /// Download historical data from yahoo finance
@@ -65,6 +66,14 @@ pub struct DownloadOpts {
     /// Request rate in terms of ms
     #[clap(long, default_value = "100")]
     pub rate: MyDuration,
+    /// Convert JSON to CSV
+    #[clap(long)]
+    pub convert: bool,
+}
+/// Convert yahoo finance v8 json into csv
+#[derive(Clap, Debug)]
+pub struct ConvertOpts {
+    pub input_dir: String,
 }
 
 #[cfg(test)]

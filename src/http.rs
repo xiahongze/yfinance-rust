@@ -28,7 +28,7 @@ impl std::fmt::Display for DownloadError {
 
 impl std::error::Error for DownloadError {}
 
-pub async fn download(opts: Opts) -> Vec<(PathBuf, Result<()>)> {
+pub async fn download(opts: &Opts) -> Vec<(PathBuf, Result<()>)> {
     let out_dir = Path::new(&opts.output_dir);
     if !out_dir.exists() {
         // try to create a directory
@@ -164,6 +164,7 @@ mod tests {
             output_dir: "./target/output".to_string(),
             interval: "1d".to_string(),
             rate: "500".parse().unwrap(),
+            convert: false,
         }
     }
 
@@ -178,7 +179,7 @@ mod tests {
     async fn test_download_success() {
         init();
         let opts = make_opts();
-        let path_results = download(opts).await;
+        let path_results = download(&opts).await;
         assert_remove(path_results, 2);
     }
 
@@ -187,7 +188,7 @@ mod tests {
         init();
         let mut opts = make_opts();
         opts.start = Some(NaiveDate::from_ymd(2020, 1, 10));
-        let path_results = download(opts).await;
+        let path_results = download(&opts).await;
         assert_remove(path_results, 0);
     }
 
@@ -197,7 +198,7 @@ mod tests {
         let mut opts = make_opts();
         opts.start = None;
         opts.end = None;
-        let path_results = download(opts).await;
+        let path_results = download(&opts).await;
         assert_remove(path_results, 2);
     }
 }

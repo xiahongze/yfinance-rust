@@ -6,6 +6,7 @@ use std::{
     error::Error,
     fs::File,
     io::{BufReader, BufWriter},
+    path::Path,
 };
 
 #[derive(Deserialize, Debug, Serialize)]
@@ -147,7 +148,7 @@ pub fn load_from_json(path: &str) -> Result<ChartWrapper, Box<dyn Error>> {
     Ok(u)
 }
 
-pub fn write_to_csv(ds: &DataSet, path: &str) -> Result<(), Box<dyn Error>> {
+pub fn write_to_csv<P: AsRef<Path>>(ds: &DataSet, path: P) -> Result<(), Box<dyn Error>> {
     let file = File::create(path)?;
     let writer = BufWriter::new(file);
     let mut wtr = Writer::from_writer(writer);
