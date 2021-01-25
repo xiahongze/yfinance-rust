@@ -1,5 +1,6 @@
 mod http;
 mod options;
+mod v8chart;
 #[macro_use]
 extern crate log;
 
