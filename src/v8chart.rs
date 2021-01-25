@@ -1,22 +1,27 @@
 use chrono::{DateTime, FixedOffset, NaiveDateTime};
+use csv::Writer;
 use itertools::izip;
-use serde::Deserialize;
-use std::{error::Error, fs::File, io::BufReader};
+use serde::{Deserialize, Serialize};
+use std::{
+    error::Error,
+    fs::File,
+    io::{BufReader, BufWriter},
+};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug, Serialize)]
 pub struct TradePeriod {
     pub timezone: String,
     pub start: u64,
     pub end: u64,
     pub gmtoffset: i32,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug, Serialize)]
 pub struct CurrentTradePeriod {
     pub pre: TradePeriod,
     pub regular: TradePeriod,
     pub post: TradePeriod,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct V8Meta {
     pub currency: String,
@@ -36,7 +41,7 @@ pub struct V8Meta {
     pub range: String,
     pub valid_ranges: Vec<String>,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct OHLCV {
     pub volume: Vec<u64>,
     pub high: Vec<f64>,
@@ -44,35 +49,34 @@ pub struct OHLCV {
     pub low: Vec<f64>,
     pub open: Vec<f64>,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct AdjClose {
     pub adjclose: Vec<f64>,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct Indicators {
     pub quote: Vec<OHLCV>,
     pub adjclose: Vec<AdjClose>,
 }
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct V8Result {
     pub meta: V8Meta,
     pub timestamp: Vec<i64>,
     pub indicators: Indicators,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct Chart {
     pub result: Vec<V8Result>,
     pub error: Option<String>,
 }
 
-pub fn load_from_json(path: &str) -> Result<Chart, Box<dyn Error>> {
-    let file = File::open(path)?;
-    let reader = BufReader::new(file);
-    let u = serde_json::from_reader(reader)?;
-    Ok(u)
+#[derive(Deserialize, Debug)]
+pub struct ChartWrapper {
+    pub chart: Chart,
 }
 
+#[derive(Serialize, Debug)]
 pub struct Record {
     pub timestamp: DateTime<FixedOffset>,
     pub volume: u64,
@@ -82,7 +86,7 @@ pub struct Record {
     pub close: f64,
     pub adjclose: f64,
 }
-
+#[derive(Serialize, Debug)]
 pub struct DataSet {
     pub records: Vec<Record>,
     pub meta: V8Meta,
@@ -133,5 +137,35 @@ impl From<Chart> for Vec<DataSet> {
             dataset_vec.push(ds);
         }
         dataset_vec
+    }
+}
+
+pub fn load_from_json(path: &str) -> Result<ChartWrapper, Box<dyn Error>> {
+    let file = File::open(path)?;
+    let reader = BufReader::new(file);
+    println!("{:?}", std::env::current_dir().unwrap());
+    let u = serde_json::from_reader(reader)?;
+    Ok(u)
+}
+
+pub fn write_to_csv(ds: &DataSet, path: &str) -> Result<(), Box<dyn Error>> {
+    let file = File::open(path)?;
+    let writer = BufWriter::new(file);
+    let mut wtr = Writer::from_writer(writer);
+    for r in ds.records.iter() {
+        wtr.serialize(r)?;
+    }
+    Ok(())
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_load_json() {
+        let result = load_from_json("assets/GXY.AX_20200103_20200107.json");
+        assert!(result.is_ok());
+        let result = load_from_json("assets/A2M.AX_20200103_20200107.json");
+        assert!(result.is_ok());
     }
 }
