@@ -1,4 +1,4 @@
-use crate::options::Opts;
+use crate::options::DownloadOpts as Opts;
 
 use chrono::Local;
 use std::path::{Path, PathBuf};
@@ -148,7 +148,6 @@ fn make_uri(opts: &Opts, symbol: &String) -> hyper::Uri {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::options::Opts;
     use chrono::NaiveDate;
     use std::{fs::remove_file, path::PathBuf};
 
@@ -162,7 +161,6 @@ mod tests {
             start: Some(NaiveDate::from_ymd(2020, 1, 3)),
             end: Some(NaiveDate::from_ymd(2020, 1, 7)),
             include_pre_post: true,
-            verbose: 0,
             output_dir: "./target/output".to_string(),
             interval: "1d".to_string(),
             rate: "500".parse().unwrap(),
@@ -172,7 +170,7 @@ mod tests {
     fn assert_remove(path_results: Vec<(PathBuf, Result<()>)>, count: usize) {
         assert_eq!(path_results.iter().filter_map(|(_, r)| r.as_ref().ok()).count(), count);
         // remove temperorary files
-        path_results.iter().for_each(|(p, _)| remove_file(p.as_path()).unwrap());
+        let _ = path_results.iter().map(|(p, _)| remove_file(p.as_path()));
     }
 
     /// with `tokio::test`, we don't need the std test macro and we can use async functions
@@ -188,7 +186,7 @@ mod tests {
     async fn test_download_fail() {
         init();
         let mut opts = make_opts();
-        opts.start = Some(NaiveDate::from_ymd(2020, 1, 6));
+        opts.start = Some(NaiveDate::from_ymd(2020, 1, 10));
         let path_results = download(opts).await;
         assert_remove(path_results, 0);
     }

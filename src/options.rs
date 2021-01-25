@@ -22,6 +22,25 @@ impl FromStr for MyDuration {
 #[derive(Clap, Debug)]
 #[clap(version = "1.0", author = "Hongze Xia hongzex@gmail.com>")]
 pub struct Opts {
+    #[clap(subcommand)]
+    pub subcmd: SubCommand,
+}
+
+pub fn parse() -> Opts {
+    let opts: Opts = Opts::parse();
+    info!("{:?}", opts);
+    opts
+}
+
+#[derive(Clap, Debug)]
+pub enum SubCommand {
+    // #[clap(version = "1.3", author = "Someone E. <someone_else@other.com>")]
+    Download(DownloadOpts),
+}
+
+/// Download historical data from yahoo finance
+#[derive(Clap, Debug)]
+pub struct DownloadOpts {
     /// List of symbols to download. Required.
     pub symbols: Vec<String>,
     /// A start date to download from
@@ -37,48 +56,16 @@ pub struct Opts {
     /// `SYMBOL_20200202_20200303.csv`
     #[clap(short, long, default_value = ".")]
     pub output_dir: String,
-    /// A level of verbosity, and can be used multiple times
-    #[clap(short, long, parse(from_occurrences))]
-    pub verbose: i32,
     /// select a proper interval for the data
     /// 1m goes back to 4-5 days
     /// 5m goes back to ~80 days
     /// others goes back to the initial trading date
     #[clap(long, default_value = "1d", possible_values = &["1m", "5m", "1d", "5d", "1wk", "1mo", "3mo"])]
     pub interval: String,
-    // #[clap(subcommand)]
-    // subcmd: SubCommand,
     /// Request rate in terms of ms
     #[clap(long, default_value = "100")]
     pub rate: MyDuration,
 }
-
-pub fn parse() -> Opts {
-    let opts: Opts = Opts::parse();
-    if let Some(start) = opts.start {
-        if let Some(end) = opts.end {
-            if start >= end {
-                panic!("start date is greater or equal to end date")
-            }
-        }
-    }
-    info!("{:?}", opts);
-    opts
-}
-
-// #[derive(Clap)]
-// enum SubCommand {
-//     #[clap(version = "1.3", author = "Someone E. <someone_else@other.com>")]
-//     Test(Test),
-// }
-//
-// /// A subcommand for controlling testing
-// #[derive(Clap)]
-// struct Test {
-//     /// Print debug info
-//     #[clap(short)]
-//     debug: bool
-// }
 
 #[cfg(test)]
 mod tests {

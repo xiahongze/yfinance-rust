@@ -1,3 +1,5 @@
+use options::SubCommand;
+
 mod http;
 mod options;
 mod v8chart;
@@ -8,5 +10,16 @@ extern crate log;
 async fn main() {
     env_logger::init();
     let opts = options::parse();
-    let _ = http::download(opts).await;
+    let _ = match opts.subcmd {
+        SubCommand::Download(opts) => {
+            if let Some(start) = opts.start {
+                if let Some(end) = opts.end {
+                    if start >= end {
+                        panic!("start date is greater or equal to end date")
+                    }
+                }
+            }
+            http::download(opts).await
+        }
+    };
 }
