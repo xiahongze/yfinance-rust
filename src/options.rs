@@ -73,7 +73,11 @@ pub struct DownloadOpts {
 /// Convert yahoo finance v8 json into csv
 #[derive(Clap, Debug)]
 pub struct ConvertOpts {
+    /// input_dir where the JSONs live
     pub input_dir: String,
+    /// whether to walk the input_dir recursively
+    #[clap(long)]
+    pub recursive: bool,
 }
 
 #[cfg(test)]

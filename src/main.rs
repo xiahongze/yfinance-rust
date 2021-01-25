@@ -1,4 +1,8 @@
-use std::fs::read_dir;
+use std::{
+    fs::read_dir,
+    iter::{empty, once},
+    path::{Path, PathBuf},
+};
 
 use options::SubCommand;
 use v8chart::{load_from_json, write_to_csv, DataSet};
@@ -9,10 +13,27 @@ mod v8chart;
 #[macro_use]
 extern crate log;
 
-fn convert_to_csv(json_dir: &String) -> std::io::Result<()> {
-    read_dir(json_dir)?
-        .map(|res| res.map(|e| e.path()))
-        .filter_map(|res| res.ok())
+fn walk_dir<P: AsRef<Path>>(dir: P, recursive: bool) -> Box<dyn Iterator<Item = PathBuf>> {
+    match read_dir(dir) {
+        Ok(result) => Box::new(
+            result
+                .map(|res| res.map(|e| e.path()))
+                .filter_map(|res| res.ok())
+                .flat_map(move |path| {
+                    if recursive && path.is_dir() {
+                        walk_dir(path, recursive)
+                    } else {
+                        Box::new(once(path))
+                    }
+                })
+                .into_iter(),
+        ),
+        _ => Box::new(empty()),
+    }
+}
+
+fn convert_to_csv(json_dir: &String, recursive: bool) -> std::io::Result<()> {
+    walk_dir(json_dir, recursive)
         .filter(|path| path.extension().map_or(false, |ext| ext == "json"))
         .for_each(|path| match load_from_json(path.to_str().unwrap()) {
             Ok(chart_wrapper) => {
@@ -47,7 +68,7 @@ fn convert_to_csv(json_dir: &String) -> std::io::Result<()> {
 async fn main() {
     env_logger::init();
     let opts = options::parse();
-    let (json_dir, convert) = match opts.subcmd {
+    let (json_dir, convert, recursive) = match opts.subcmd {
         SubCommand::Download(opts) => {
             if let Some(start) = opts.start {
                 if let Some(end) = opts.end {
@@ -57,12 +78,12 @@ async fn main() {
                 }
             }
             let _ = http::download(&opts).await;
-            (opts.output_dir, opts.convert)
+            (opts.output_dir, opts.convert, false)
         }
-        SubCommand::Convert(opts) => (opts.input_dir, true),
+        SubCommand::Convert(opts) => (opts.input_dir, true, opts.recursive),
     };
     if convert {
-        match convert_to_csv(&json_dir) {
+        match convert_to_csv(&json_dir, recursive) {
             Err(err) => error!("failed to walk dir {} with {:?}", json_dir, err),
             _ => {}
         }
