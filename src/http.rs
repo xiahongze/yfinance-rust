@@ -55,7 +55,9 @@ pub async fn download(opts: Opts) -> Vec<(PathBuf, Result<()>)> {
             opts.start
                 .map_or("init".to_string(), |s| s.format("%Y%m%d").to_string()),
             opts.end
-                .map_or(Local::now().to_string(), |s| s.format("%Y%m%d").to_string()),
+                .unwrap_or(Local::now().naive_local().date())
+                .format("%Y%m%d")
+                .to_string(),
         );
         let uri = make_uri(&opts, symb);
         let pathbuf = out_dir.join(filename);
@@ -145,10 +147,10 @@ fn make_uri(opts: &Opts, symbol: &String) -> hyper::Uri {
 
 #[cfg(test)]
 mod tests {
-    use super::download;
+    use super::*;
     use crate::options::Opts;
     use chrono::NaiveDate;
-    use std::fs::remove_file;
+    use std::{fs::remove_file, path::PathBuf};
 
     fn init() {
         let _ = env_logger::builder().is_test(true).try_init();
@@ -167,15 +169,19 @@ mod tests {
         }
     }
 
+    fn assert_remove(path_results: Vec<(PathBuf, Result<()>)>, count: usize) {
+        assert_eq!(path_results.iter().filter_map(|(_, r)| r.as_ref().ok()).count(), count);
+        // remove temperorary files
+        path_results.iter().for_each(|(p, _)| remove_file(p.as_path()).unwrap());
+    }
+
     /// with `tokio::test`, we don't need the std test macro and we can use async functions
     #[tokio::test]
     async fn test_download_success() {
         init();
         let opts = make_opts();
         let path_results = download(opts).await;
-        assert_eq!(path_results.iter().filter_map(|(_, r)| r.as_ref().ok()).count(), 2);
-        // remove temperorary files
-        path_results.iter().for_each(|(p, _)| remove_file(p.as_path()).unwrap());
+        assert_remove(path_results, 2);
     }
 
     #[tokio::test]
@@ -183,9 +189,17 @@ mod tests {
         init();
         let mut opts = make_opts();
         opts.start = Some(NaiveDate::from_ymd(2020, 1, 6));
-        assert_eq!(
-            download(opts).await.iter().filter_map(|(_, r)| r.as_ref().ok()).count(),
-            0
-        );
+        let path_results = download(opts).await;
+        assert_remove(path_results, 0);
+    }
+
+    #[tokio::test]
+    async fn test_optional_start_end() {
+        init();
+        let mut opts = make_opts();
+        opts.start = None;
+        opts.end = None;
+        let path_results = download(opts).await;
+        assert_remove(path_results, 2);
     }
 }
