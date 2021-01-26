@@ -3,6 +3,7 @@ use csv::Writer;
 use itertools::izip;
 use serde::{Deserialize, Serialize};
 use std::{
+    collections::HashMap,
     error::Error,
     fs::File,
     io::{BufReader, BufWriter},
@@ -59,11 +60,33 @@ pub struct Indicators {
     pub quote: Vec<OHLCV>,
     pub adjclose: Vec<AdjClose>,
 }
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Split {
+    pub date: i64,
+    pub numerator: u8,
+    pub denominator: u8,
+    pub split_ratio: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Dividend {
+    pub amount: f64,
+    pub date: i64,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Event {
+    splits: Option<HashMap<String, Split>>,
+    dividends: Option<HashMap<String, Dividend>>,
+}
 #[derive(Deserialize, Debug)]
 pub struct V8Result {
     pub meta: V8Meta,
     pub timestamp: Vec<i64>,
     pub indicators: Indicators,
+    pub events: Option<Event>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -86,6 +109,8 @@ pub struct Record {
     pub open: Option<f64>,
     pub close: Option<f64>,
     pub adjclose: Option<f64>,
+    pub split: Option<String>,
+    pub dividend: Option<f64>,
 }
 #[derive(Serialize, Debug)]
 pub struct DataSet {
@@ -127,14 +152,30 @@ impl From<Chart> for Vec<DataSet> {
                     FixedOffset::west(gmtoffset)
                 };
                 let tm = DateTime::<FixedOffset>::from_utc(naive, offset);
+                let (split, dividend) = result
+                    .events
+                    .as_ref()
+                    .map(|ev| {
+                        let date_key = t.to_string();
+                        (
+                            ev.splits
+                                .as_ref()
+                                .and_then(|m| m.get(&date_key).map(|s| s.split_ratio.clone())),
+                            ev.dividends.as_ref().and_then(|m| m.get(&date_key).map(|d| d.amount)),
+                        )
+                    })
+                    .unwrap_or((None, None));
+
                 ds.records.push(Record {
                     timestamp: tm,
                     volume: *v,
-                    open: *o,
                     high: *h,
                     low: *l,
+                    open: *o,
                     close: *c,
                     adjclose: *a,
+                    split,
+                    dividend,
                 });
             }
             dataset_vec.push(ds);
@@ -185,7 +226,7 @@ mod tests {
 
     #[test]
     fn test_write_csv() {
-        let chart_wrapper = load_from_json("assets/A2M.AX_20200103_20200107.json").unwrap();
+        let chart_wrapper = load_from_json("assets/AAPL_init_20210126.json").unwrap();
         let ds_vec: Vec<DataSet> = chart_wrapper.chart.into();
         let result = write_to_csv(&ds_vec[0], "test.csv");
         assert!(result.is_ok());
