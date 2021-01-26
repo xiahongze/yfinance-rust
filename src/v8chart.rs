@@ -93,6 +93,8 @@ pub struct DataSet {
     pub meta: V8Meta,
 }
 
+/// convert chart to a vec of DataSet
+/// Usually there is only one element unless the symbol is ambiguious
 impl From<Chart> for Vec<DataSet> {
     fn from(chart: Chart) -> Self {
         let mut dataset_vec: Vec<DataSet> = vec![];
@@ -141,6 +143,7 @@ impl From<Chart> for Vec<DataSet> {
     }
 }
 
+/// read a json from file
 pub fn load_from_json(path: &str) -> Result<ChartWrapper, Box<dyn Error>> {
     let file = File::open(path)?;
     let reader = BufReader::new(file);
@@ -148,6 +151,7 @@ pub fn load_from_json(path: &str) -> Result<ChartWrapper, Box<dyn Error>> {
     Ok(u)
 }
 
+/// write a dataset to path
 pub fn write_to_csv<P: AsRef<Path>>(ds: &DataSet, path: P) -> Result<(), Box<dyn Error>> {
     let file = File::create(path)?;
     let writer = BufWriter::new(file);

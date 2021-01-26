@@ -13,6 +13,7 @@ mod v8chart;
 #[macro_use]
 extern crate log;
 
+/// recursively walk a directory
 fn walk_dir<P: AsRef<Path>>(dir: P, recursive: bool) -> Box<dyn Iterator<Item = PathBuf>> {
     match read_dir(dir) {
         Ok(result) => Box::new(
@@ -32,6 +33,7 @@ fn walk_dir<P: AsRef<Path>>(dir: P, recursive: bool) -> Box<dyn Iterator<Item = 
     }
 }
 
+/// convert a json at a path to CSVs in the same path
 fn convert(path: PathBuf) {
     match load_from_json(path.as_path().to_str().unwrap()) {
         Ok(chart_wrapper) => {
@@ -61,6 +63,7 @@ fn convert(path: PathBuf) {
     }
 }
 
+/// wrapper over [`convert`] and [`walk_dir`]
 fn convert_to_csv(json_dir: &String, recursive: bool) -> std::io::Result<()> {
     walk_dir(json_dir, recursive)
         .filter(|path| path.extension().map_or(false, |ext| ext == "json"))

@@ -8,6 +8,7 @@ This is not about re-creating wheels but rather a personal project to familiaris
 - move semantics
 - lifetimes
 - functional programming
+- recursion with boxes
 - async programming
 - error and option handling
 - macro (really like rust-analyzer's macro expanision ---- it is a dream.)

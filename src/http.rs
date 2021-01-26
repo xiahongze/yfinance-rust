@@ -13,6 +13,7 @@ use hyper::{
 };
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
+/// A custom error that captures http status and response
 #[derive(Debug)]
 struct DownloadError {
     status: StatusCode,
@@ -28,6 +29,8 @@ impl std::fmt::Display for DownloadError {
 
 impl std::error::Error for DownloadError {}
 
+/// Entry function that takes a [crate::options::DownloadOpts] to download from Yahoo Finance
+/// V8 chart API and write the JSONs into files
 pub async fn download(opts: &Opts) -> Vec<(PathBuf, Result<()>)> {
     let out_dir = Path::new(&opts.output_dir);
     if !out_dir.exists() {
@@ -103,13 +106,14 @@ pub async fn download(opts: &Opts) -> Vec<(PathBuf, Result<()>)> {
 }
 
 /**
- * https://stackoverflow.com/questions/60964238/how-to-write-a-hyper-response-body-to-a-file
- * had to use into_body() because after consuming the body resp is not going to be used
- * if using body(), a ref is used but resp is moved so it won't compile
- *
- * Latest update: mut resp and use body_mut()
- *
- * */
+Use Tokio to pipe reader to writer as stream
+[ref: stackoverflow](https://stackoverflow.com/questions/60964238/how-to-write-a-hyper-response-body-to-a-file)
+
+**NOTE**
+- had to use into_body() because after consuming the body resp is not going to be used
+- if using body(), a ref is used but resp is moved so it won't compile
+- Latest update: mut resp and use body_mut()
+*/
 async fn write_to_file(mut resp: Response<Body>, path: &Path) -> Result<()> {
     let futures_io_async_read = resp
         .body_mut()
@@ -123,6 +127,7 @@ async fn write_to_file(mut resp: Response<Body>, path: &Path) -> Result<()> {
     Ok(())
 }
 
+/// compose a V8 API request URI
 fn make_uri(opts: &Opts, symbol: &String) -> hyper::Uri {
     let base = format!("https://query1.finance.yahoo.com/v8/finance/chart/{}", symbol);
     let start = opts

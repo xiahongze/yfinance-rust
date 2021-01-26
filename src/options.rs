@@ -82,10 +82,18 @@ pub struct ConvertOpts {
 
 #[cfg(test)]
 mod tests {
-    // use super::*;
+    use super::*;
+    // #[test]
+    // #[should_panic(expected = "I am scared!")]
+    // fn test_fun() {
+    //     panic!("I am scared!");
+    // }
+
     #[test]
-    #[should_panic(expected = "I am scared!")]
-    fn test_fun() {
-        panic!("I am scared!");
+    fn test_parse_ms() {
+        let result = MyDuration::from_str("100");
+        assert!(result.is_ok());
+        let rate = result.unwrap();
+        assert_eq!(rate.duration.as_millis(), 100);
     }
 }
