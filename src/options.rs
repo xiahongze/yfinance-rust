@@ -44,7 +44,7 @@ pub enum SubCommand {
 pub struct DownloadOpts {
     /// List of symbols to download. Required.
     pub symbols: Vec<String>,
-    /// A start date to download from
+    /// A start date to download from. Default to the initial trading day.
     #[clap(long)]
     pub start: Option<NaiveDate>,
     /// An end date. Default to Now
@@ -53,8 +53,8 @@ pub struct DownloadOpts {
     /// Include pre & post market data
     #[clap(long)]
     pub include_pre_post: bool,
-    /// Sets a output directory. The format of the output CSV looks like
-    /// `SYMBOL_20200202_20200303.csv`
+    /// Sets a output directory. The format of the output JSON looks like
+    /// `SYMBOL_20200202_20200303.json`
     #[clap(short, long, default_value = ".")]
     pub output_dir: String,
     /// select a proper interval for the data
