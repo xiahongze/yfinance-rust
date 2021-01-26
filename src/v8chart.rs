@@ -146,11 +146,7 @@ impl From<Chart> for Vec<DataSet> {
             };
             for (t, (v, o, h, l, c, a)) in result.timestamp.iter().zip(vohlca_iter) {
                 let naive = NaiveDateTime::from_timestamp(*t, 0);
-                let offset = if gmtoffset > 0 {
-                    FixedOffset::east(gmtoffset)
-                } else {
-                    FixedOffset::west(gmtoffset)
-                };
+                let offset = FixedOffset::east(gmtoffset);
                 let tm = DateTime::<FixedOffset>::from_utc(naive, offset);
                 let (split, dividend) = result
                     .events
