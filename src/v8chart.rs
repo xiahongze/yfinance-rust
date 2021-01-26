@@ -202,6 +202,8 @@ pub fn write_to_csv<P: AsRef<Path>>(ds: &DataSet, path: P) -> Result<(), Box<dyn
 mod tests {
     use std::fs::remove_file;
 
+    use rand::{distributions::Alphanumeric, thread_rng, Rng};
+
     use super::*;
 
     #[test]
@@ -224,8 +226,14 @@ mod tests {
     fn test_write_csv() {
         let chart_wrapper = load_from_json("assets/AAPL_init_20210126.json").unwrap();
         let ds_vec: Vec<DataSet> = chart_wrapper.chart.into();
-        let result = write_to_csv(&ds_vec[0], "test.csv");
+        let prefix: String = thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(30)
+            .map(char::from)
+            .collect();
+        let path = std::env::temp_dir().join(prefix);
+        let result = write_to_csv(&ds_vec[0], path.clone());
         assert!(result.is_ok());
-        let _ = remove_file("test.csv");
+        let _ = remove_file(path);
     }
 }

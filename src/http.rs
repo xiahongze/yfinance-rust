@@ -154,29 +154,41 @@ fn make_uri(opts: &Opts, symbol: &String) -> hyper::Uri {
 mod tests {
     use super::*;
     use chrono::NaiveDate;
-    use std::{fs::remove_file, path::PathBuf};
+    use rand::distributions::Alphanumeric;
+    use rand::{thread_rng, Rng};
+    use std::{
+        fs::{remove_dir_all, remove_file},
+        path::PathBuf,
+    };
 
     fn init() {
         let _ = env_logger::builder().is_test(true).try_init();
     }
 
     fn make_opts() -> Opts {
+        let prefix: String = thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(30)
+            .map(char::from)
+            .collect();
         Opts {
             symbols: vec!["GXY.AX".to_string(), "A2M.AX".to_string()],
             start: Some(NaiveDate::from_ymd(2020, 1, 3)),
             end: Some(NaiveDate::from_ymd(2020, 1, 7)),
             include_pre_post: true,
-            output_dir: "./target/output".to_string(),
+            output_dir: std::env::temp_dir().join(prefix).to_str().unwrap().to_string(),
             interval: "1d".to_string(),
             rate: "500".parse().unwrap(),
             convert: false,
         }
     }
 
-    fn assert_remove(path_results: Vec<(PathBuf, Result<()>)>, count: usize) {
+    fn assert_remove(path_results: Vec<(PathBuf, Result<()>)>, count: usize, temp_dir: &str) {
         assert_eq!(path_results.iter().filter_map(|(_, r)| r.as_ref().ok()).count(), count);
         // remove temperorary files
         let _ = path_results.iter().map(|(p, _)| remove_file(p.as_path()));
+        remove_dir_all(temp_dir).expect(format!("failed to remove dir {}", temp_dir).as_str());
+        debug!("have removed temp dir {}", temp_dir);
     }
 
     /// with `tokio::test`, we don't need the std test macro and we can use async functions
@@ -185,7 +197,7 @@ mod tests {
         init();
         let opts = make_opts();
         let path_results = download(&opts).await;
-        assert_remove(path_results, 2);
+        assert_remove(path_results, 2, &opts.output_dir);
     }
 
     #[tokio::test]
@@ -194,7 +206,7 @@ mod tests {
         let mut opts = make_opts();
         opts.start = Some(NaiveDate::from_ymd(2020, 1, 10));
         let path_results = download(&opts).await;
-        assert_remove(path_results, 0);
+        assert_remove(path_results, 0, &opts.output_dir);
     }
 
     #[tokio::test]
@@ -204,6 +216,6 @@ mod tests {
         opts.start = None;
         opts.end = None;
         let path_results = download(&opts).await;
-        assert_remove(path_results, 2);
+        assert_remove(path_results, 2, &opts.output_dir);
     }
 }
