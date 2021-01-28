@@ -26,8 +26,7 @@ fn walk_dir<P: AsRef<Path>>(dir: P, recursive: bool) -> Box<dyn Iterator<Item = 
                     } else {
                         Box::new(once(path))
                     }
-                })
-                .into_iter(),
+                }),
         ),
         _ => Box::new(empty()),
     }
@@ -64,7 +63,7 @@ fn convert(path: PathBuf) {
 }
 
 /// wrapper over [`convert`] and [`walk_dir`]
-fn convert_to_csv(json_dir: &String, recursive: bool) -> std::io::Result<()> {
+fn convert_to_csv(json_dir: &str, recursive: bool) -> std::io::Result<()> {
     walk_dir(json_dir, recursive)
         .filter(|path| path.extension().map_or(false, |ext| ext == "json"))
         .for_each(convert);
@@ -93,9 +92,10 @@ async fn main() {
                 });
             }
         }
-        SubCommand::Convert(opts) => match convert_to_csv(&opts.input_dir, opts.recursive) {
-            Err(err) => error!("failed to walk dir {} with {:?}", opts.input_dir, err),
-            _ => {}
-        },
+        SubCommand::Convert(opts) => {
+            if let Err(err) = convert_to_csv(&opts.input_dir, opts.recursive) {
+                error!("failed to walk dir {} with {:?}", opts.input_dir, err);
+            }
+        }
     };
 }

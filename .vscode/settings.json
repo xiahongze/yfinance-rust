@@ -1,5 +1,6 @@
 {
     "rust-analyzer.runnableEnv": {
         "RUST_LOG": "DEBUG"
-    }
+    },
+    "rust-analyzer.checkOnSave.command": "clippy",
 }

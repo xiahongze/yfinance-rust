@@ -35,12 +35,9 @@ pub async fn download(opts: &Opts) -> Vec<(PathBuf, Result<()>)> {
     let out_dir = Path::new(&opts.output_dir);
     if !out_dir.exists() {
         // try to create a directory
-        match std::fs::create_dir(out_dir) {
-            Err(err) => {
-                error!("failed to create directory at {:?} with error {:?}", out_dir, err);
-                return vec![];
-            }
-            _ => {}
+        if let Err(err) = std::fs::create_dir(out_dir) {
+            error!("failed to create directory at {:?} with error {:?}", out_dir, err);
+            return vec![];
         }
     }
 
@@ -58,7 +55,7 @@ pub async fn download(opts: &Opts) -> Vec<(PathBuf, Result<()>)> {
             opts.start
                 .map_or("init".to_string(), |s| s.format("%Y%m%d").to_string()),
             opts.end
-                .unwrap_or(Local::now().naive_local().date())
+                .unwrap_or_else(|| Local::now().naive_local().date())
                 .format("%Y%m%d")
                 .to_string(),
         );
@@ -90,7 +87,7 @@ pub async fn download(opts: &Opts) -> Vec<(PathBuf, Result<()>)> {
     }
     let total = tasks.len();
     let results = futures::future::join_all(tasks).await;
-    let success = results
+    let success: u32 = results
         .iter()
         .map(|r| match r {
             Ok(_) => 1,
@@ -99,7 +96,7 @@ pub async fn download(opts: &Opts) -> Vec<(PathBuf, Result<()>)> {
                 0
             }
         })
-        .fold(0, |acc, x| acc + x);
+        .sum();
     info!("have successfully download {} of {}", success, total);
 
     paths.into_iter().zip(results).collect()
@@ -128,7 +125,7 @@ async fn write_to_file(mut resp: Response<Body>, path: &Path) -> Result<()> {
 }
 
 /// compose a V8 API request URI
-fn make_uri(opts: &Opts, symbol: &String) -> hyper::Uri {
+fn make_uri(opts: &Opts, symbol: &str) -> hyper::Uri {
     let base = format!("https://query1.finance.yahoo.com/v8/finance/chart/{}", symbol);
     let start = opts
         .start
@@ -187,7 +184,7 @@ mod tests {
         assert_eq!(path_results.iter().filter_map(|(_, r)| r.as_ref().ok()).count(), count);
         // remove temperorary files
         let _ = path_results.iter().map(|(p, _)| remove_file(p.as_path()));
-        remove_dir_all(temp_dir).expect(format!("failed to remove dir {}", temp_dir).as_str());
+        remove_dir_all(temp_dir).unwrap_or_else(|_| panic!("failed to remove dir {}", temp_dir));
         debug!("have removed temp dir {}", temp_dir);
     }
 
