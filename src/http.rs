@@ -62,7 +62,7 @@ pub async fn download(opts: &Opts) -> Vec<(PathBuf, Result<()>)> {
         let uri = make_uri(&opts, symb);
         let pathbuf = out_dir.join(filename);
         paths.push(pathbuf.clone());
-        sleep(opts.rate.duration).await;
+        sleep(opts.rate.0).await;
         let task = async move {
             let mut resp = client.get(uri).await?;
             debug!(

@@ -2,18 +2,14 @@ use chrono::NaiveDate;
 use clap::Clap;
 use std::{num::ParseIntError, str::FromStr, time::Duration};
 #[derive(Debug)]
-pub struct MyDuration {
-    pub duration: Duration,
-}
+pub struct MyDuration(pub Duration);
 
 impl FromStr for MyDuration {
     type Err = ParseIntError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.parse::<u64>() {
-            Ok(ms) => Ok(MyDuration {
-                duration: Duration::from_millis(ms),
-            }),
+            Ok(ms) => Ok(MyDuration(Duration::from_millis(ms))),
             Err(err) => Err(err),
         }
     }
@@ -93,7 +89,8 @@ mod tests {
     fn test_parse_ms() {
         let result = MyDuration::from_str("100");
         assert!(result.is_ok());
-        let rate = result.unwrap();
-        assert_eq!(rate.duration.as_millis(), 100);
+        let duration = result.unwrap();
+        let MyDuration(rate) = duration;
+        assert_eq!(rate.as_millis(), 100);
     }
 }
