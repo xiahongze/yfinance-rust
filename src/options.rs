@@ -1,8 +1,16 @@
 use chrono::NaiveDate;
 use clap::Clap;
-use std::{num::ParseIntError, str::FromStr, time::Duration};
+use std::{num::ParseIntError, ops::Deref, str::FromStr, time::Duration};
 #[derive(Debug)]
 pub struct MyDuration(pub Duration);
+
+impl Deref for MyDuration {
+    type Target = Duration;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 impl FromStr for MyDuration {
     type Err = ParseIntError;
@@ -90,7 +98,6 @@ mod tests {
         let result = MyDuration::from_str("100");
         assert!(result.is_ok());
         let duration = result.unwrap();
-        let MyDuration(rate) = duration;
-        assert_eq!(rate.as_millis(), 100);
+        assert_eq!(duration.as_millis(), 100);
     }
 }
